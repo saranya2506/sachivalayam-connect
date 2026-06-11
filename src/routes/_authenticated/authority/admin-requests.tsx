@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/authority/admin-requests")
 interface Row {
   id: string; user_id: string; employee_id: string; district: string; mandal: string; village_ward: string;
   department: string; verification_status: string; created_at: string;
-  profiles: { full_name: string; email: string; active_status: boolean } | null;
+  full_name?: string; email?: string; mobile_number?: string; active_status?: boolean;
 }
 
 function AdminRequests() {
@@ -19,10 +19,19 @@ function AdminRequests() {
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
-    let q = supabase.from("admin_registrations").select("*,profiles!inner(full_name,email,active_status)").order("created_at", { ascending: false });
+    let q = supabase.from("admin_registrations").select("*").order("created_at", { ascending: false });
     if (filter) q = q.eq("verification_status", filter as never);
-    const { data } = await q;
-    setRows((data as unknown as Row[]) ?? []);
+    const { data, error } = await q;
+    if (error) { toast.error(error.message); setRows([]); return; }
+    const regs = (data ?? []) as Row[];
+    const ids = Array.from(new Set(regs.map((r) => r.user_id)));
+    let profMap: Record<string, { full_name: string; email: string; mobile_number: string | null; active_status: boolean }> = {};
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles")
+        .select("id,full_name,email,mobile_number,active_status").in("id", ids);
+      profs?.forEach((p) => { profMap[p.id] = p as never; });
+    }
+    setRows(regs.map((r) => ({ ...r, ...profMap[r.user_id] })));
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [filter]);
 
@@ -59,9 +68,9 @@ function AdminRequests() {
               {rows.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No requests.</td></tr>}
               {rows.map((r) => (
                 <tr key={r.id} className="border-t align-top">
-                  <td className="p-3">{r.profiles?.full_name}</td>
+                  <td className="p-3">{r.full_name ?? "—"}</td>
                   <td className="p-3 font-mono">{r.employee_id}</td>
-                  <td className="p-3">{r.profiles?.email}</td>
+                  <td className="p-3">{r.email ?? "—"}</td>
                   <td className="p-3">{r.district} · {r.mandal} · {r.village_ward}</td>
                   <td className="p-3">{r.department}</td>
                   <td className="p-3"><StatusBadge status={r.verification_status} /></td>
@@ -72,7 +81,7 @@ function AdminRequests() {
                       <button disabled={busy} onClick={() => decide(r.id, "rejected")} className="rounded bg-destructive px-3 py-1 text-xs font-semibold text-destructive-foreground hover:bg-destructive/90 disabled:opacity-60">Reject</button>
                     </>)}
                     {r.verification_status === "approved" && (
-                      r.profiles?.active_status
+                      r.active_status
                         ? <button disabled={busy} onClick={() => toggle(r.user_id, false)} className="rounded bg-muted px-3 py-1 text-xs font-semibold hover:bg-muted/80 disabled:opacity-60">Disable</button>
                         : <button disabled={busy} onClick={() => toggle(r.user_id, true)} className="rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60">Enable</button>
                     )}
