@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
+import { registerAdminRequest } from "@/lib/api/sachivalayam.functions";
 
 export const Route = createFileRoute("/register-admin")({ component: RegisterAdmin });
 
@@ -31,32 +31,11 @@ function RegisterAdmin() {
     if (!parsed.success) { toast.error(parsed.error.errors[0].message); return; }
     setBusy(true);
     try {
-      // check employee_id unique up-front
-      const { data: existing } = await supabase.from("admin_registrations").select("id").eq("employee_id", form.employee_id).maybeSingle();
-      if (existing) throw new Error("Employee ID already registered.");
-
-      const { data, error } = await supabase.auth.signUp({
-        email: form.email, password: form.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth`,
-          data: { full_name: form.full_name, mobile_number: form.mobile_number, intended_role: "admin" },
-        },
-      });
-      if (error) throw error;
-      if (!data.user) throw new Error("Account creation failed");
-
-      // We need to upsert registration & deactivate profile
-      const { error: regErr } = await supabase.from("admin_registrations").insert({
-        user_id: data.user.id, employee_id: form.employee_id, district: form.district,
-        mandal: form.mandal, village_ward: form.village_ward, department: form.department,
-      });
-      if (regErr) throw regErr;
-      await supabase.from("profiles").update({
-        mobile_number: form.mobile_number, department: form.department, active_status: false,
-      }).eq("id", data.user.id);
-
-      // sign out so the unverified admin can't access anything
-      await supabase.auth.signOut();
+      await registerAdminRequest({ data: {
+        fullName: form.full_name, email: form.email, password: form.password,
+        mobileNumber: form.mobile_number, employeeId: form.employee_id, department: form.department,
+        district: form.district, mandal: form.mandal, villageWard: form.village_ward,
+      }});
       toast.success("Registration submitted. Awaiting Government Authority approval.");
       nav({ to: "/auth" });
     } catch (err) {
