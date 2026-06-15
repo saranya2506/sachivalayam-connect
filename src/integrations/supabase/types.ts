@@ -16,6 +16,9 @@ export type Database = {
     Tables: {
       admin_registrations: {
         Row: {
+          archived: boolean
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           department: string
           district: string
@@ -30,6 +33,9 @@ export type Database = {
           village_ward: string
         }
         Insert: {
+          archived?: boolean
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           department: string
           district: string
@@ -44,6 +50,9 @@ export type Database = {
           village_ward: string
         }
         Update: {
+          archived?: boolean
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           department?: string
           district?: string
@@ -129,7 +138,10 @@ export type Database = {
       }
       complaints: {
         Row: {
+          assigned_admin_id: string | null
+          assigned_at: string | null
           assigned_officer_id: string | null
+          assignment_remarks: string | null
           category: Database["public"]["Enums"]["complaint_category"]
           citizen_id: string
           complaint_number: string
@@ -145,7 +157,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_admin_id?: string | null
+          assigned_at?: string | null
           assigned_officer_id?: string | null
+          assignment_remarks?: string | null
           category: Database["public"]["Enums"]["complaint_category"]
           citizen_id: string
           complaint_number: string
@@ -161,7 +176,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_admin_id?: string | null
+          assigned_at?: string | null
           assigned_officer_id?: string | null
+          assignment_remarks?: string | null
           category?: Database["public"]["Enums"]["complaint_category"]
           citizen_id?: string
           complaint_number?: string
@@ -366,7 +384,10 @@ export type Database = {
           application_number: string | null
           application_type: Database["public"]["Enums"]["service_app_type"]
           approved_at: string | null
+          assigned_admin_id: string | null
+          assigned_at: string | null
           assigned_officer_id: string | null
+          assignment_remarks: string | null
           citizen_id: string
           citizen_name: string
           completed_at: string | null
@@ -388,7 +409,10 @@ export type Database = {
           application_number?: string | null
           application_type: Database["public"]["Enums"]["service_app_type"]
           approved_at?: string | null
+          assigned_admin_id?: string | null
+          assigned_at?: string | null
           assigned_officer_id?: string | null
+          assignment_remarks?: string | null
           citizen_id: string
           citizen_name: string
           completed_at?: string | null
@@ -410,7 +434,10 @@ export type Database = {
           application_number?: string | null
           application_type?: Database["public"]["Enums"]["service_app_type"]
           approved_at?: string | null
+          assigned_admin_id?: string | null
+          assigned_at?: string | null
           assigned_officer_id?: string | null
+          assignment_remarks?: string | null
           citizen_id?: string
           citizen_name?: string
           completed_at?: string | null

@@ -11,10 +11,11 @@ export const Route = createFileRoute("/_authenticated/complaints/$id")({ compone
 interface ComplaintRow {
   id: string; complaint_number: string; title: string; category: string; description: string;
   location: string; photo_url: string | null; status: string; created_at: string;
-  citizen_id: string; assigned_officer_id: string | null; department: string | null; last_remark: string | null;
+  citizen_id: string; assigned_officer_id: string | null; assigned_admin_id: string | null;
+  department: string | null; last_remark: string | null;
 }
 interface TimelineRow { id: string; status: string; remarks: string | null; created_at: string; updated_by: string | null }
-interface OfficerOpt { user_id: string; department: string; profiles: { full_name: string } | null }
+interface OfficerOpt { user_id: string; department: string; full_name: string }
 
 function ComplaintDetail() {
   const { id } = useParams({ from: "/_authenticated/complaints/$id" });
@@ -51,10 +52,18 @@ function ComplaintDetail() {
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
   useEffect(() => {
-    if (role === "admin") {
-      supabase.from("officers").select("user_id,department,profiles!inner(full_name)").eq("active", true)
-        .then(({ data }) => setOfficers((data as unknown as OfficerOpt[]) ?? []));
-    }
+    if (role !== "admin" && role !== "government_authority") return;
+    (async () => {
+      const { data: o, error } = await supabase.from("officers").select("user_id,department").eq("active", true);
+      console.log("[officers dropdown] fetch", { count: o?.length ?? 0, error: error?.message });
+      const ids = (o ?? []).map((x) => x.user_id);
+      if (!ids.length) { setOfficers([]); return; }
+      const { data: p } = await supabase.from("profiles").select("id,full_name").in("id", ids);
+      const map: Record<string, string> = {}; p?.forEach((x) => { map[x.id] = x.full_name; });
+      const opts = (o ?? []).map((x) => ({ user_id: x.user_id, department: x.department, full_name: map[x.user_id] ?? "(unnamed)" }));
+      console.log("[officers dropdown] ready", opts);
+      setOfficers(opts);
+    })();
   }, [role]);
 
   if (!c) return <div className="text-muted-foreground">Loading…</div>;
@@ -107,22 +116,28 @@ function ComplaintDetail() {
         </div>
       </div>
 
-      {(canAdmin || canOfficer) && (
+      {(canAdmin || canOfficer || role === "government_authority") && (
         <div className="rounded-lg border bg-card p-6 space-y-4">
           <h3 className="font-semibold">Take action</h3>
-          {canAdmin && c.status === "submitted" && (
-            <div className="space-y-2">
-              <label className="block text-sm font-medium">Assign to officer</label>
-              <div className="flex flex-wrap gap-2">
-                <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="rounded-md border bg-background px-3 py-2 text-sm">
-                  <option value="">Select officer…</option>
-                  {officers.map((o) => <option key={o.user_id} value={o.user_id}>{o.profiles?.full_name} — {o.department}</option>)}
-                </select>
-                <input placeholder="Remarks (optional)" value={statusForm.remarks} onChange={(e) => setStatusForm({ ...statusForm, remarks: e.target.value })} className="min-w-[200px] flex-1 rounded-md border bg-background px-3 py-2 text-sm" />
-                <button onClick={doAssign} disabled={busy} className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60">Assign</button>
+          {(role === "admin" || role === "government_authority") && (() => {
+            const canReassign = c.status === "submitted" || role === "government_authority" || c.assigned_admin_id === user?.id;
+            if (!canReassign) {
+              return <div className="text-sm text-muted-foreground">🔒 Already assigned by another admin. Only the original assigning admin or Government Authority can reassign.</div>;
+            }
+            return (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">{c.assigned_officer_id ? "Reassign officer" : "Assign to officer"}</label>
+                <div className="flex flex-wrap gap-2">
+                  <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="rounded-md border bg-background px-3 py-2 text-sm">
+                    <option value="">Select officer… ({officers.length})</option>
+                    {officers.map((o) => <option key={o.user_id} value={o.user_id}>{o.full_name} — {o.department}</option>)}
+                  </select>
+                  <input placeholder="Remarks (optional)" value={statusForm.remarks} onChange={(e) => setStatusForm({ ...statusForm, remarks: e.target.value })} className="min-w-[200px] flex-1 rounded-md border bg-background px-3 py-2 text-sm" />
+                  <button onClick={doAssign} disabled={busy} className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60">{c.assigned_officer_id ? "Reassign" : "Assign"}</button>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
           {(canOfficer || canAdmin) && nextStatuses[c.status]?.length > 0 && (
             <div className="space-y-2">
               <label className="block text-sm font-medium">Update status</label>

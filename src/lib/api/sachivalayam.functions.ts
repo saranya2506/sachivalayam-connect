@@ -237,21 +237,35 @@ export const assignComplaint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => assignSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId, _role: "admin",
-    });
-    if (!isAdmin) throw new Error("Forbidden");
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isGov } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "government_authority" });
+    if (!isAdmin && !isGov) throw new Error("Forbidden");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Multi-admin lock: only original assigning admin or gov authority can reassign.
+    const { data: existing } = await supabaseAdmin.from("complaints")
+      .select("assigned_admin_id,assigned_officer_id").eq("id", data.complaintId).maybeSingle();
+    if (!existing) throw new Error("Complaint not found");
+    if (existing.assigned_admin_id && existing.assigned_admin_id !== context.userId && !isGov) {
+      const { data: who } = await supabaseAdmin.from("profiles").select("full_name").eq("id", existing.assigned_admin_id).maybeSingle();
+      throw new Error(`Already assigned by Admin ${who?.full_name ?? "another admin"}.`);
+    }
+
     const { data: officerProfile } = await supabaseAdmin.from("profiles").select("department").eq("id", data.officerId).maybeSingle();
     const { data: complaint } = await supabaseAdmin.from("complaints")
       .update({
         assigned_officer_id: data.officerId,
+        assigned_admin_id: context.userId,
+        assigned_at: new Date().toISOString(),
+        assignment_remarks: data.remarks ?? null,
         department: officerProfile?.department ?? null,
         status: "assigned",
         last_remark: data.remarks ?? null,
       })
       .eq("id", data.complaintId).select().single();
     if (!complaint) throw new Error("Complaint not found");
+    console.log("[assignComplaint]", { complaintId: data.complaintId, officerId: data.officerId, adminId: context.userId });
     await supabaseAdmin.from("complaint_timeline").insert({
       complaint_id: data.complaintId, status: "assigned", remarks: data.remarks, updated_by: context.userId,
     });
@@ -261,7 +275,29 @@ export const assignComplaint = createServerFn({ method: "POST" })
     ]);
     await supabaseAdmin.from("audit_logs").insert({
       actor_id: context.userId, action: "COMPLAINT_ASSIGNED",
-      entity_type: "complaint", entity_id: data.complaintId, metadata: { officer_id: data.officerId },
+      entity_type: "complaint", entity_id: data.complaintId, metadata: { officer_id: data.officerId, admin_id: context.userId },
+    });
+    return { ok: true };
+  });
+
+// --- Archive / restore admin registration (gov authority only) ---
+export const archiveAdminRegistration = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ registrationId: z.string().uuid(), archive: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isGov } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "government_authority" });
+    if (!isGov) throw new Error("Forbidden: not a Government Authority");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("admin_registrations").update({
+      archived: data.archive,
+      archived_at: data.archive ? new Date().toISOString() : null,
+      archived_by: data.archive ? context.userId : null,
+    }).eq("id", data.registrationId);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: data.archive ? "ADMIN_REG_ARCHIVED" : "ADMIN_REG_RESTORED",
+      entity_type: "admin_registration", entity_id: data.registrationId,
     });
     return { ok: true };
   });

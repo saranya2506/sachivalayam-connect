@@ -9,7 +9,9 @@ export const Route = createFileRoute("/_authenticated/citizen/")({ component: Ci
 
 interface Complaint {
   id: string; complaint_number: string; title: string; category: string;
-  status: string; created_at: string; department: string | null;
+  status: string; created_at: string; updated_at: string; department: string | null;
+  assigned_officer_id: string | null; last_remark: string | null;
+  officer_name?: string;
 }
 
 function CitizenDashboard() {
@@ -20,9 +22,19 @@ function CitizenDashboard() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("complaints").select("id,complaint_number,title,category,status,created_at,department")
-      .eq("citizen_id", user.id).order("created_at", { ascending: false })
-      .then(({ data }) => setComplaints((data as Complaint[]) ?? []));
+    (async () => {
+      const { data } = await supabase.from("complaints")
+        .select("id,complaint_number,title,category,status,created_at,updated_at,department,assigned_officer_id,last_remark")
+        .eq("citizen_id", user.id).order("created_at", { ascending: false });
+      const rows = (data as Complaint[]) ?? [];
+      const offIds = Array.from(new Set(rows.map((r) => r.assigned_officer_id).filter(Boolean) as string[]));
+      const nameMap: Record<string, string> = {};
+      if (offIds.length) {
+        const { data: profs } = await supabase.from("profiles").select("id,full_name").in("id", offIds);
+        profs?.forEach((p) => { nameMap[p.id] = p.full_name; });
+      }
+      setComplaints(rows.map((r) => ({ ...r, officer_name: r.assigned_officer_id ? nameMap[r.assigned_officer_id] : undefined })));
+    })();
   }, [user]);
 
   const filtered = complaints.filter((c) =>
@@ -79,16 +91,18 @@ function CitizenDashboard() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
-              <tr><th className="p-3">Complaint ID</th><th className="p-3">Title</th><th className="p-3">Category</th><th className="p-3">Status</th><th className="p-3">Submitted</th><th className="p-3"></th></tr>
+              <tr><th className="p-3">Complaint ID</th><th className="p-3">Title</th><th className="p-3">Category</th><th className="p-3">Status</th><th className="p-3">Assigned Officer</th><th className="p-3">Last Update</th><th className="p-3">Submitted</th><th className="p-3"></th></tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No complaints yet. Submit your first complaint to get started.</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No complaints yet. Submit your first complaint to get started.</td></tr>}
               {filtered.map((c) => (
                 <tr key={c.id} className="border-t">
                   <td className="p-3 font-mono font-semibold">{c.complaint_number}</td>
                   <td className="p-3">{c.title}</td>
                   <td className="p-3 capitalize">{c.category.replace(/_/g, " ")}</td>
                   <td className="p-3"><StatusBadge status={c.status} /></td>
+                  <td className="p-3">{c.officer_name ? <span>{c.officer_name}<div className="text-xs text-muted-foreground">{c.department}</div></span> : <span className="text-muted-foreground">—</span>}</td>
+                  <td className="p-3 text-muted-foreground">{new Date(c.updated_at).toLocaleDateString()}{c.last_remark && <div className="text-xs">{c.last_remark}</div>}</td>
                   <td className="p-3 text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
                   <td className="p-3"><Link to="/complaints/$id" params={{ id: c.id }} className="text-primary font-medium hover:underline">View</Link></td>
                 </tr>

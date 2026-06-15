@@ -83,24 +83,38 @@ export const assignServiceOfficer = createServerFn({ method: "POST" })
     const { data: isGov } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "government_authority" });
     if (!isAdmin && !isGov) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Multi-admin lock
+    const { data: existing } = await supabaseAdmin.from("service_applications")
+      .select("assigned_admin_id").eq("id", data.applicationId).maybeSingle();
+    if (!existing) throw new Error("Application not found");
+    if (existing.assigned_admin_id && existing.assigned_admin_id !== context.userId && !isGov) {
+      const { data: who } = await supabaseAdmin.from("profiles").select("full_name").eq("id", existing.assigned_admin_id).maybeSingle();
+      throw new Error(`Already assigned by Admin ${who?.full_name ?? "another admin"}.`);
+    }
+
     const { data: prof } = await supabaseAdmin.from("profiles").select("department").eq("id", data.officerId).maybeSingle();
     const { data: app } = await supabaseAdmin.from("service_applications").update({
       assigned_officer_id: data.officerId,
+      assigned_admin_id: context.userId,
+      assigned_at: new Date().toISOString(),
+      assignment_remarks: data.remarks ?? null,
       department: prof?.department ?? null,
       status: "assigned",
       last_remark: data.remarks ?? null,
     }).eq("id", data.applicationId).select().single();
     if (!app) throw new Error("Application not found");
+    console.log("[assignServiceOfficer]", { applicationId: data.applicationId, officerId: data.officerId, adminId: context.userId });
     await supabaseAdmin.from("service_app_timeline").insert({
       application_id: data.applicationId, status: "assigned", remarks: data.remarks, updated_by: context.userId,
     });
     await supabaseAdmin.from("notifications").insert([
-      { user_id: data.officerId, title: `New application assigned: ${app.application_number}`, link: `/services/${app.id}` },
-      { user_id: app.citizen_id, title: `Your application ${app.application_number} has been assigned`, link: `/services/${app.id}` },
+      { user_id: data.officerId, title: `New application assigned: ${app.application_number}`, link: `/citizen/services/${app.id}` },
+      { user_id: app.citizen_id, title: `Your application ${app.application_number} has been assigned`, link: `/citizen/services/${app.id}` },
     ]);
     await supabaseAdmin.from("audit_logs").insert({
       actor_id: context.userId, action: "SERVICE_APP_ASSIGNED",
-      entity_type: "service_application", entity_id: data.applicationId, metadata: { officer_id: data.officerId },
+      entity_type: "service_application", entity_id: data.applicationId, metadata: { officer_id: data.officerId, admin_id: context.userId },
     });
     return { ok: true };
   });
