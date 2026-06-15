@@ -3,13 +3,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge } from "@/components/AppShell";
 import { toast } from "sonner";
-import { decideAdminRegistration, toggleUserActive } from "@/lib/api/sachivalayam.functions";
+import { decideAdminRegistration, toggleUserActive, archiveAdminRegistration } from "@/lib/api/sachivalayam.functions";
 
 export const Route = createFileRoute("/_authenticated/authority/admin-requests")({ component: AdminRequests });
 
 interface Row {
   id: string; user_id: string; employee_id: string; district: string; mandal: string; village_ward: string;
-  department: string; verification_status: string; created_at: string;
+  department: string; verification_status: string; created_at: string; archived: boolean;
+  full_name?: string | null; email?: string | null; mobile_number?: string | null; active_status?: boolean;
+}
   full_name?: string | null; email?: string | null; mobile_number?: string | null; active_status?: boolean;
 }
 
