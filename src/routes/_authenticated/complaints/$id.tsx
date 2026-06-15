@@ -14,7 +14,7 @@ interface ComplaintRow {
   citizen_id: string; assigned_officer_id: string | null; department: string | null; last_remark: string | null;
 }
 interface TimelineRow { id: string; status: string; remarks: string | null; created_at: string; updated_by: string | null }
-interface OfficerOpt { user_id: string; department: string; profiles: { full_name: string } | null }
+interface OfficerOpt { user_id: string; department: string; full_name: string }
 
 function ComplaintDetail() {
   const { id } = useParams({ from: "/_authenticated/complaints/$id" });
