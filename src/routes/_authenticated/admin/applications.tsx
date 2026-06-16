@@ -17,6 +17,7 @@ interface Officer { user_id: string; department: string; full_name: string }
 function AdminApplications() {
   const [rows, setRows] = useState<Row[]>([]);
   const [officers, setOfficers] = useState<Officer[]>([]);
+  const [officerMap, setOfficerMap] = useState<Record<string, string>>({});
   const [status, setStatus] = useState("");
   const [type, setType] = useState("");
   const [q, setQ] = useState("");
@@ -27,7 +28,14 @@ function AdminApplications() {
     if (status) query = query.eq("status", status as never);
     if (type) query = query.eq("application_type", type as never);
     const { data } = await query;
-    setRows((data as Row[]) ?? []);
+    const rs = (data as Row[]) ?? [];
+    setRows(rs);
+    const ids = Array.from(new Set(rs.map((r) => r.assigned_officer_id).filter(Boolean) as string[]));
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles").select("id,full_name").in("id", ids);
+      const m: Record<string, string> = {}; profs?.forEach((p) => { m[p.id] = p.full_name; });
+      setOfficerMap((prev) => ({ ...prev, ...m }));
+    }
   };
   const loadOfficers = async () => {
     const { data: o } = await supabase.from("officers").select("user_id,department");
@@ -35,6 +43,7 @@ function AdminApplications() {
     if (!ids.length) { setOfficers([]); return; }
     const { data: p } = await supabase.from("profiles").select("id,full_name").in("id", ids);
     const map: Record<string, string> = {}; p?.forEach((x) => { map[x.id] = x.full_name; });
+    setOfficerMap((prev) => ({ ...prev, ...map }));
     setOfficers((o ?? []).map((x) => ({ user_id: x.user_id, department: x.department, full_name: map[x.user_id] ?? "" })));
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [status, type]);
