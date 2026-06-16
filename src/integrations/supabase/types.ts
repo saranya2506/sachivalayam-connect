@@ -73,30 +73,39 @@ export type Database = {
           action: string
           actor_email: string | null
           actor_id: string | null
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           entity_id: string | null
           entity_type: string | null
           id: string
+          is_archived: boolean
           metadata: Json | null
         }
         Insert: {
           action: string
           actor_email?: string | null
           actor_id?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string | null
           id?: string
+          is_archived?: boolean
           metadata?: Json | null
         }
         Update: {
           action?: string
           actor_email?: string | null
           actor_id?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string | null
           id?: string
+          is_archived?: boolean
           metadata?: Json | null
         }
         Relationships: []
