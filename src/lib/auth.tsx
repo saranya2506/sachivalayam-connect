@@ -15,29 +15,40 @@ interface AuthState {
 
 const AuthCtx = createContext<AuthState | undefined>(undefined);
 
+// Retry loading role up to 3 times with increasing delay (handles DB trigger timing)
+async function loadRoleWithRetry(uid: string): Promise<AppRole | null> {
+  const delays = [0, 800, 2000];
+  for (const delay of delays) {
+    if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", uid);
+    if (data && data.length > 0) {
+      const order: AppRole[] = ["government_authority", "admin", "officer", "citizen"];
+      const found = order.find((r) => data.some((d) => d.role === r));
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadRole = async (uid: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", uid);
-    if (!data || data.length === 0) return setRole(null);
-    const order: AppRole[] = ["government_authority", "admin", "officer", "citizen"];
-    const found = order.find((r) => data.some((d) => d.role === r));
-    setRole(found ?? null);
-  };
-
   const refresh = async () => {
     const { data } = await supabase.auth.getSession();
     setSession(data.session);
     setUser(data.session?.user ?? null);
-    if (data.session?.user) await loadRole(data.session.user.id);
-    else setRole(null);
+    if (data.session?.user) {
+      const r = await loadRoleWithRetry(data.session.user.id);
+      setRole(r);
+    } else {
+      setRole(null);
+    }
     setLoading(false);
   };
 
@@ -46,7 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
-        setTimeout(() => loadRole(sess.user.id), 0);
+        // Use setTimeout to avoid Supabase deadlock during auth state change
+        setTimeout(async () => {
+          const r = await loadRoleWithRetry(sess.user.id);
+          setRole(r);
+        }, 0);
       } else {
         setRole(null);
       }

@@ -11,7 +11,7 @@ export const Route = createFileRoute("/auth")({ component: AuthPage });
 
 function AuthPage() {
   const nav = useNavigate();
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, refresh } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
@@ -50,6 +50,8 @@ function AuthPage() {
       await supabase.from("profiles").update({ last_login: new Date().toISOString() }).eq("id", data.user.id);
       // audit
       await supabase.from("audit_logs").insert({ actor_id: data.user.id, actor_email: data.user.email, action: "LOGIN" });
+      // Refresh auth context so role is loaded before the useEffect redirect fires
+      await refresh();
       toast.success("Signed in");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign in failed");

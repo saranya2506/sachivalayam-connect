@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
+import { registerCitizen } from "@/lib/api/auth.functions";
 
 export const Route = createFileRoute("/register-citizen")({ component: RegisterCitizen });
 
@@ -29,21 +30,33 @@ function RegisterCitizen() {
     if (!parsed.success) { toast.error(parsed.error.errors[0].message); return; }
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: form.email, password: form.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth`,
-          data: { full_name: form.full_name, mobile_number: form.mobile_number, intended_role: "citizen" },
+      // Use server function to create user via admin API (bypasses email confirmation)
+      await registerCitizen({
+        data: {
+          full_name: form.full_name,
+          email: form.email,
+          mobile_number: form.mobile_number,
+          address: form.address,
+          village: form.village,
+          password: form.password,
         },
       });
-      if (error) throw error;
-      if (data.user) {
-        await supabase.from("profiles").update({
-          full_name: form.full_name, mobile_number: form.mobile_number, address: form.address, village: form.village,
-        }).eq("id", data.user.id);
+
+      // Sign in immediately since email is pre-confirmed
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+
+      if (signInError) {
+        toast.success("Account created successfully. Please sign in.");
+        nav({ to: "/auth" });
+      } else {
+        toast.success("Account created successfully. Welcome!");
+        // Small delay to let Supabase trigger assign the citizen role before navigating
+        await new Promise((r) => setTimeout(r, 1000));
+        nav({ to: "/citizen" });
       }
-      toast.success("Account created. You can sign in now.");
-      nav({ to: "/auth" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally { setBusy(false); }
