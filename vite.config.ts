@@ -12,4 +12,9 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Pin to Vercel's Node.js adapter so server functions work on Vercel.
+  // The cloudflare-module default produces a Workers bundle that Vercel cannot run.
+  // This has no effect inside Lovable Cloud (preset is forced there), and is
+  // overridden by NITRO_PRESET env var if you ever need a different target.
+  nitro: { preset: "vercel" },
 });
