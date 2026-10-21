@@ -37,6 +37,7 @@ import { Route as AuthenticatedAdminComplaintsRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminApplicationsRouteImport } from './routes/_authenticated/admin/applications'
 import { Route as AuthenticatedCitizenServicesIdRouteImport } from './routes/_authenticated/citizen/services/$id'
 import { Route as AuthenticatedCitizenServicesNewTypeRouteImport } from './routes/_authenticated/citizen/services/new/$type'
+import { Route as AuthenticatedCitizenServicesIndexRouteImport } from './routes/_authenticated/citizen/services/index'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -193,6 +194,12 @@ const AuthenticatedCitizenServicesNewTypeRoute =
     path: '/new/$type',
     getParentRoute: () => AuthenticatedCitizenServicesRoute,
   } as any)
+const AuthenticatedCitizenServicesIndexRoute =
+  AuthenticatedCitizenServicesIndexRouteImport.update({
+    id: '/citizen/services/',
+    path: '/citizen/services/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -222,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/officer/': typeof AuthenticatedOfficerIndexRoute
   '/citizen/services/$id': typeof AuthenticatedCitizenServicesIdRoute
   '/citizen/services/new/$type': typeof AuthenticatedCitizenServicesNewTypeRoute
+  '/citizen/services/': typeof AuthenticatedCitizenServicesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -242,7 +250,7 @@ export interface FileRoutesByTo {
   '/authority/audit-logs': typeof AuthenticatedAuthorityAuditLogsRoute
   '/authority/complaints': typeof AuthenticatedAuthorityComplaintsRoute
   '/citizen/new': typeof AuthenticatedCitizenNewRoute
-  '/citizen/services': typeof AuthenticatedCitizenServicesRouteWithChildren
+  '/citizen/services': typeof AuthenticatedCitizenServicesIndexRoute
   '/complaints/$id': typeof AuthenticatedComplaintsIdRoute
   '/officer/applications': typeof AuthenticatedOfficerApplicationsRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/_authenticated/officer/': typeof AuthenticatedOfficerIndexRoute
   '/_authenticated/citizen/services/$id': typeof AuthenticatedCitizenServicesIdRoute
   '/_authenticated/citizen/services/new/$type': typeof AuthenticatedCitizenServicesNewTypeRoute
+  '/_authenticated/citizen/services/': typeof AuthenticatedCitizenServicesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -313,6 +322,7 @@ export interface FileRouteTypes {
     | '/officer/'
     | '/citizen/services/$id'
     | '/citizen/services/new/$type'
+    | '/citizen/services/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/_authenticated/officer/'
     | '/_authenticated/citizen/services/$id'
     | '/_authenticated/citizen/services/new/$type'
+    | '/_authenticated/citizen/services/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -584,6 +595,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCitizenServicesNewTypeRouteImport
       parentRoute: typeof AuthenticatedCitizenServicesRoute
     }
+    '/_authenticated/citizen/services/': {
+      id: '/_authenticated/citizen/services/'
+      path: '/citizen/services/'
+      fullPath: '/citizen/services/'
+      preLoaderRoute: typeof AuthenticatedCitizenServicesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -622,6 +640,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuthorityIndexRoute: typeof AuthenticatedAuthorityIndexRoute
   AuthenticatedCitizenIndexRoute: typeof AuthenticatedCitizenIndexRoute
   AuthenticatedOfficerIndexRoute: typeof AuthenticatedOfficerIndexRoute
+  AuthenticatedCitizenServicesIndexRoute: typeof AuthenticatedCitizenServicesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -645,6 +664,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAuthorityIndexRoute: AuthenticatedAuthorityIndexRoute,
   AuthenticatedCitizenIndexRoute: AuthenticatedCitizenIndexRoute,
   AuthenticatedOfficerIndexRoute: AuthenticatedOfficerIndexRoute,
+  AuthenticatedCitizenServicesIndexRoute: AuthenticatedCitizenServicesIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
