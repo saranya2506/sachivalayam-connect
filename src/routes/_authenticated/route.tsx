@@ -31,7 +31,7 @@ function ProtectedLayout() {
       const currentPath = window.location.pathname;
       // If user is on a path that doesn't belong to their role, redirect to their home
       const isOnWrongPrefix = Object.values(ROLE_PREFIX).some(
-        (prefix) => prefix !== correctPrefix && currentPath.startsWith(prefix)
+        (prefix) => prefix !== correctPrefix && currentPath.startsWith(prefix),
       );
       if (isOnWrongPrefix || currentPath === "/") {
         nav({ to: roleHome(role) });
@@ -39,27 +39,35 @@ function ProtectedLayout() {
     }
   }, [loading, user, role, nav]);
 
-  if (loading) return (
-    <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>
-  );
+  if (loading)
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Loading…
+      </div>
+    );
   if (!user) return null;
 
-  if (!role) return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="text-center max-w-md">
-        <h2 className="font-bold text-xl">Account pending</h2>
-        <p className="text-muted-foreground mt-2">
-          Your account doesn't have an assigned role yet. Please contact the authority.
-        </p>
-        <button
-          className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-          onClick={() => window.location.reload()}
-        >
-          Retry
-        </button>
+  if (!role)
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <h2 className="font-bold text-xl">Account pending</h2>
+          <p className="text-muted-foreground mt-2">
+            Your account doesn't have an assigned role yet. Please contact the authority.
+          </p>
+          <button
+            className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
 
-  return <AppShell><Outlet /></AppShell>;
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
 }

@@ -20,10 +20,7 @@ async function loadRoleWithRetry(uid: string): Promise<AppRole | null> {
   const delays = [0, 800, 2000];
   for (const delay of delays) {
     if (delay > 0) await new Promise((r) => setTimeout(r, delay));
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", uid);
+    const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
     if (data && data.length > 0) {
       const order: AppRole[] = ["government_authority", "admin", "officer", "citizen"];
       const found = order.find((r) => data.some((d) => d.role === r));
@@ -71,7 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     refresh();
     return () => sub.subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const signOut = async () => {
@@ -96,10 +92,15 @@ export function useAuth() {
 
 export function roleHome(role: AppRole | null): string {
   switch (role) {
-    case "government_authority": return "/authority";
-    case "admin": return "/admin";
-    case "officer": return "/officer";
-    case "citizen": return "/citizen";
-    default: return "/auth";
+    case "government_authority":
+      return "/authority";
+    case "admin":
+      return "/admin";
+    case "officer":
+      return "/officer";
+    case "citizen":
+      return "/citizen";
+    default:
+      return "/auth";
   }
 }

@@ -19,21 +19,38 @@ function ForgotPassword() {
       toast.success("Reset email sent. Check your inbox.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to send reset email");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
         <h1 className="mb-1 text-xl font-bold">Reset password</h1>
-        <p className="mb-5 text-sm text-muted-foreground">We'll send a reset link to your registered email.</p>
+        <p className="mb-5 text-sm text-muted-foreground">
+          We'll send a reset link to your registered email.
+        </p>
         <form onSubmit={submit} className="space-y-3">
-          <input required type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
-          <button disabled={busy} className="w-full rounded-md bg-primary py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
+          <input
+            required
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          />
+          <button
+            disabled={busy}
+            className="w-full rounded-md bg-primary py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+          >
             {busy ? "Sending…" : "Send reset link"}
           </button>
         </form>
-        <p className="mt-4 text-sm text-center"><Link to="/auth" className="text-primary hover:underline">Back to login</Link></p>
+        <p className="mt-4 text-sm text-center">
+          <Link to="/auth" className="text-primary hover:underline">
+            Back to login
+          </Link>
+        </p>
       </div>
     </div>
   );
