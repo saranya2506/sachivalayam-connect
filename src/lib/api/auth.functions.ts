@@ -4,7 +4,9 @@ import { z } from "zod";
 const registerCitizenSchema = z.object({
   full_name: z.string().min(2).max(120),
   email: z.string().email(),
-  mobile_number: z.string().min(5).max(20),
+  mobile_number: z
+    .string()
+    .regex(/^[0-9]{10}$/, "Mobile number must contain exactly 10 digits"),
   address: z.string().max(300).optional(),
   village: z.string().max(120).optional(),
   password: z.string().min(8).max(72),
