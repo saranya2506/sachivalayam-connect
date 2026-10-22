@@ -75,17 +75,22 @@ function NewApp() {
     }
   };
 
+  
   const set =
-    (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    (k: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       let value = e.target.value;
-  if (k === "aadhaarNumber") {
-    value = value.replace(/\D/g, "").slice(0, 12);
-  }
-  if (k === "mobileNumber") {
-    value = value.replace(/\D/g, "").slice(0, 10);
-  }
-  setForm({ ...form, [k]: value });
-};
+
+      if (k === "aadhaarNumber") {
+        value = value.replace(/\D/g, "").slice(0, 12);
+      }
+
+      if (k === "mobileNumber") {
+        value = value.replace(/\D/g, "").slice(0, 10);
+      }
+
+      setForm({ ...form, [k]: value });
+    };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
