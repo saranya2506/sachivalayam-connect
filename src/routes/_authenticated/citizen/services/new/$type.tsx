@@ -43,6 +43,14 @@ function NewApp() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!/^[0-9]{12}$/.test(form.aadhaarNumber)) {
+      toast.error("Aadhaar number must contain exactly 12 digits");
+      return;
+    }
+    if (!/^[0-9]{10}$/.test(form.mobileNumber)) {
+      toast.error("Mobile number must contain exactly 10 digits");
+      return;
+    }
     setBusy(true);
     try {
       const r = await createServiceApplication({
@@ -69,7 +77,15 @@ function NewApp() {
 
   const set =
     (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm({ ...form, [k]: e.target.value });
+      let value = e.target.value;
+  if (k === "aadhaarNumber") {
+    value = value.replace(/\D/g, "").slice(0, 12);
+  }
+  if (k === "mobileNumber") {
+    value = value.replace(/\D/g, "").slice(0, 10);
+  }
+  setForm({ ...form, [k]: value });
+};
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
