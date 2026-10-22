@@ -10,7 +10,9 @@ const schema = z
   .object({
     full_name: z.string().min(2).max(120),
     email: z.string().email(),
-    mobile_number: z.string().min(5).max(20),
+    mobile_number: z
+      .string()
+      .regex(/^[0-9]{10}$/, "Mobile number must contain exactly 10 digits"),
     employee_id: z.string().min(2).max(50),
     department: z.string().min(1).max(100),
     district: z.string().min(1).max(100),
